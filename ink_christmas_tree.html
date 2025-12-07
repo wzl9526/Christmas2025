@@ -1,0 +1,311 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Ink Wash Christmas 🎄</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Playfair+Display:ital@0;1&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            /* 仿古宣纸背景 */
+            background-color: #f4f3ea;
+            background-image: linear-gradient(to right, rgba(0,0,0,0.02) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(0,0,0,0.02) 1px, transparent 1px);
+            background-size: 30px 30px; /* 淡淡的九宫格底纹 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Playfair Display', 'Noto Serif SC', serif;
+        }
+        canvas {
+            display: block;
+        }
+        .seal {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            width: 80px;
+            height: 80px;
+            background-color: #a83232; /* 印泥红 */
+            color: white;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Noto Serif SC', serif;
+            font-size: 24px;
+            line-height: 1.2;
+            text-align: center;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            opacity: 0.9;
+            user-select: none;
+            cursor: pointer;
+        }
+        .instruction {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: #888;
+            font-size: 12px;
+            letter-spacing: 2px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="seal" onclick="location.reload()">圣诞<br>快乐</div>
+    <div class="instruction">- Click Screen for Blessings -</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+
+        // --- 双语语料库 (古诗/成语 + 英文意译) ---
+        const greetings = [
+            { cn: "瑞雪兆丰年", en: "A Timely Snow Promises a Good Harvest" },
+            { cn: "岁岁常柏松", en: "Evergreen as the Pine" },
+            { cn: "千里共婵娟", en: "Wishing You Peace and Love" },
+            { cn: "浮生半日闲", en: "Enjoy the Christmas Moment" },
+            { cn: "万事皆胜意", en: "May All Go Well With You" },
+            { cn: "圣诞快乐", en: "Merry Christmas" },
+            { cn: "平安喜乐", en: "Joy and Peace" },
+            { cn: "白雪妆青松", en: "White Snow Decorates the Pine" }
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            drawScene(); // 重绘场景
+        }
+        window.addEventListener('resize', resize);
+
+        // --- 核心绘制逻辑 ---
+
+        // 1. 绘制水墨松树 (分形递归)
+        function drawInkTree(x, y, len, angle, width_branch, depth) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle * Math.PI / 180);
+
+            // 笔触风格：深墨绿，半透明模拟水墨晕染
+            // 越往末端颜色越浅
+            const r = 20 + depth * 5;
+            const g = 40 + depth * 5;
+            const b = 30 + depth * 5;
+            ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.8)`;
+            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.8)`;
+
+            // 树干不是直线，而是像毛笔画出来的三角形
+            ctx.beginPath();
+            ctx.moveTo(-width_branch/2, 0);
+            ctx.lineTo(width_branch/2, 0);
+            ctx.lineTo(0, -len);
+            ctx.fill();
+
+            // 递归终止
+            if (depth <= 0) {
+                // 树梢积雪 (留白)
+                if (Math.random() > 0.5) {
+                    ctx.beginPath();
+                    ctx.arc(0, -len, 3, 0, Math.PI*2);
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+                    ctx.fill();
+                }
+                ctx.restore();
+                return;
+            }
+
+            // 松树特征：侧枝角度较大，且向上
+            const scale = 0.7;
+            drawInkTree(0, -len*0.85, len * scale, -35, width_branch * 0.7, depth - 1);
+            drawInkTree(0, -len*0.85, len * scale, 35, width_branch * 0.7, depth - 1);
+            // 顶端主枝
+            drawInkTree(0, -len, len * scale, 0, width_branch * 0.8, depth - 1);
+
+            ctx.restore();
+        }
+
+        // 2. 绘制装饰点 (朱砂红点，模拟红果或灯笼)
+        function drawRedDots() {
+            const treeBaseX = width / 2;
+            const treeBaseY = height - 50;
+            // 简单随机分布在三角形区域内模拟树上的装饰
+            for(let i=0; i<60; i++) {
+                // 粗略的三角形区域计算
+                const yLevel = Math.random(); // 0(底) 到 1(顶)
+                const yPos = treeBaseY - yLevel * 500;
+                const xSpread = (1 - yLevel) * 150; // 底部宽，顶部窄
+                const xPos = treeBaseX + (Math.random() - 0.5) * 2 * xSpread;
+
+                ctx.beginPath();
+                ctx.arc(xPos, yPos, Math.random() * 3 + 2, 0, Math.PI*2);
+                ctx.fillStyle = "#b22222"; // 朱红
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = "#b22222";
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // 3. 绘制文字气泡类
+        class FloatText {
+            constructor(x, y, content) {
+                this.x = x;
+                this.y = y;
+                this.content = content; // {cn, en}
+                this.alpha = 0;
+                this.life = 0;
+                this.maxLife = 200;
+                this.vy = -0.5; // 向上飘
+            }
+            update() {
+                this.y += this.vy;
+                this.life++;
+                // 淡入淡出
+                if (this.life < 30) this.alpha = this.life / 30;
+                else if (this.life > 150) this.alpha = (200 - this.life) / 50;
+                else this.alpha = 1;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.textAlign = "center";
+
+                // 中文
+                ctx.font = "bold 28px 'Noto Serif SC', serif";
+                ctx.fillStyle = "#2c3e50"; // 墨色
+                ctx.fillText(this.content.cn, this.x, this.y);
+
+                // 英文
+                ctx.font = "italic 16px 'Playfair Display', serif";
+                ctx.fillStyle = "#8b0000"; // 深红
+                ctx.fillText(this.content.en, this.x, this.y + 25);
+
+                // 装饰线
+                ctx.beginPath();
+                ctx.moveTo(this.x - 20, this.y + 10);
+                ctx.lineTo(this.x + 20, this.y + 10);
+                ctx.strokeStyle = "rgba(0,0,0,0.1)";
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        // --- 动画循环 ---
+        const texts = [];
+        let time = 0;
+
+        function drawScene() {
+            // 背景清空（带一点透明度，形成拖尾效果，或者完全清空）
+            // 这里我们每帧完全重绘背景图层，不动树
+            ctx.clearRect(0, 0, width, height);
+
+            // 1. 静态绘制树 (每一帧都画树其实浪费性能，但为了简单逻辑)
+            // 在实际复杂项目中应使用离屏 Canvas
+            // 这里为了让树看起来像"静止的水墨画"，我们固定参数
+            drawInkTree(width/2, height - 50, 120, 0, 20, 10);
+            drawRedDots(); // 注意：这会让红点闪烁，因为是随机的。
+            // 修正：我们需要红点固定。
+            // 简单处理：在 animate 外面生成红点位置？
+            // 鉴于篇幅，我们接受红点闪烁，这看起来像霓虹灯。
+        }
+
+        // 修正：将树和背景作为静态层
+        let bgCanvas = document.createElement('canvas');
+        let bgCtx = bgCanvas.getContext('2d');
+        let bgReady = false;
+
+        function prepareBackground() {
+            bgCanvas.width = width;
+            bgCanvas.height = height;
+
+            // 画树
+            // 劫持 ctx 绘制到 bgCtx
+            const tempCtx = ctx; 
+            // drawInkTree 需要用 bgCtx
+            // 这里为了简单，直接把代码里的 ctx 换成 bgCtx 不太行
+            // 我们重新定义一个绘制函数传入 context
+            drawTreeOnContext(bgCtx, width/2, height-50, 120, 0, 20, 10);
+
+            // 画固定的红点
+            const treeBaseX = width / 2;
+            const treeBaseY = height - 50;
+            for(let i=0; i<50; i++) {
+                const yLevel = Math.random(); 
+                const yPos = treeBaseY - yLevel * 450;
+                const xSpread = (1 - yLevel) * 120; 
+                const xPos = treeBaseX + (Math.random() - 0.5) * 2 * xSpread;
+                bgCtx.beginPath();
+                bgCtx.arc(xPos, yPos, Math.random() * 3 + 1, 0, Math.PI*2);
+                bgCtx.fillStyle = "#b22222"; 
+                bgCtx.fill();
+            }
+
+            bgReady = true;
+        }
+
+        function drawTreeOnContext(c, x, y, len, angle, w, d) {
+            c.save();
+            c.translate(x, y);
+            c.rotate(angle * Math.PI / 180);
+            const r = 20 + d * 5; const g = 45 + d * 5; const b = 35 + d * 5;
+            c.fillStyle = `rgba(${r}, ${g}, ${b}, 0.85)`;
+            c.beginPath();
+            c.moveTo(-w/2, 0); c.lineTo(w/2, 0); c.lineTo(0, -len);
+            c.fill();
+            if (d <= 0) { c.restore(); return; }
+            const s = 0.75;
+            drawTreeOnContext(c, 0, -len*0.9, len*s, -30, w*0.7, d-1);
+            drawTreeOnContext(c, 0, -len*0.9, len*s, 30, w*0.7, d-1);
+            drawTreeOnContext(c, 0, -len, len*s, 0, w*0.8, d-1);
+            c.restore();
+        }
+
+        // --- 主循环 ---
+        function animate() {
+            if (!bgReady) prepareBackground();
+
+            ctx.clearRect(0, 0, width, height);
+
+            // 1. 画背景图层
+            ctx.drawImage(bgCanvas, 0, 0);
+
+            // 2. 下雪 (墨点雪)
+            if (Math.random() > 0.9) {
+                // 简易模拟，不需要复杂粒子系统
+                // 也可以略过保持画面干净
+            }
+
+            // 3. 更新文字
+            for (let i = texts.length - 1; i >= 0; i--) {
+                const t = texts[i];
+                t.update();
+                t.draw();
+                if (t.life > t.maxLife) texts.splice(i, 1);
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // --- 交互 ---
+        document.body.addEventListener('click', (e) => {
+            // 在点击位置生成双语祝福
+            const randomMsg = greetings[Math.floor(Math.random() * greetings.length)];
+            texts.push(new FloatText(e.clientX, e.clientY, randomMsg));
+        });
+
+        // 自动播放几个
+        setTimeout(() => texts.push(new FloatText(width/2, height/2, greetings[0])), 500);
+
+        resize();
+        animate();
+    </script>
+</body>
+</html>
